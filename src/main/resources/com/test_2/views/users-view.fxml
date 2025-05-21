@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox spacing="20.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.test_2.controllers.UsersViewController">
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+    </padding>
+
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Label text="Gestion des utilisateurs" style="-fx-font-size: 24; -fx-font-weight: bold;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="addUserButton" onAction="#handleAddUser" text="Ajouter un utilisateur" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+    </HBox>
+
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <ComboBox fx:id="typeFilterComboBox" promptText="Filtrer par type" style="-fx-background-color: #3c3f41; -fx-text-fill: white;"/>
+        <ComboBox fx:id="classFilterComboBox" promptText="Filtrer par classe" style="-fx-background-color: #3c3f41; -fx-text-fill: white;"/>
+        <TextField fx:id="searchField" promptText="Rechercher..." style="-fx-background-color: #3c3f41; -fx-text-fill: white;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="refreshButton" onAction="#handleRefresh" text="Actualiser" style="-fx-background-color: #2196F3; -fx-text-fill: white;"/>
+    </HBox>
+
+    <TableView fx:id="usersTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="idColumn" text="ID" prefWidth="50"/>
+            <TableColumn fx:id="typeColumn" text="Type" prefWidth="100"/>
+            <TableColumn fx:id="lastNameColumn" text="Nom" prefWidth="150"/>
+            <TableColumn fx:id="firstNameColumn" text="Prénom" prefWidth="150"/>
+            <TableColumn fx:id="birthDateColumn" text="Date de naissance" prefWidth="150"/>
+            <TableColumn fx:id="classColumn" text="Classe" prefWidth="100"/>
+            <TableColumn fx:id="usernameColumn" text="Nom d'utilisateur" prefWidth="150"/>
+            <TableColumn fx:id="actionsColumn" text="Actions" prefWidth="150"/>
+        </columns>
+    </TableView>
+
+    <Label fx:id="errorLabel" textFill="RED" visible="false"/>
+</VBox> 

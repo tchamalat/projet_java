@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="20.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.test_2.controllers.EditScheduleController">
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+    </padding>
+
+    <Label text="Modification d'un cours" style="-fx-font-size: 24; -fx-font-weight: bold;"/>
+    
+    <ComboBox fx:id="subjectComboBox" promptText="Matière" style="-fx-background-color: #3c3f41; -fx-text-fill: white;"/>
+    
+    <ComboBox fx:id="teacherComboBox" promptText="Enseignant" style="-fx-background-color: #3c3f41; -fx-text-fill: white;"/>
+    
+    <ComboBox fx:id="roomComboBox" promptText="Salle" style="-fx-background-color: #3c3f41; -fx-text-fill: white;"/>
+    
+    <ComboBox fx:id="dayComboBox" promptText="Jour" style="-fx-background-color: #3c3f41; -fx-text-fill: white;"/>
+    
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Label text="Heure de début :" style="-fx-text-fill: white;"/>
+        <Spinner fx:id="startHourSpinner" min="8" max="19" initialValue="8" style="-fx-background-color: #3c3f41; -fx-text-fill: white;"/>
+        <Label text=":" style="-fx-text-fill: white;"/>
+        <Spinner fx:id="startMinuteSpinner" min="0" max="59" initialValue="0" style="-fx-background-color: #3c3f41; -fx-text-fill: white;"/>
+    </HBox>
+    
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Label text="Heure de fin :" style="-fx-text-fill: white;"/>
+        <Spinner fx:id="endHourSpinner" min="8" max="20" initialValue="9" style="-fx-background-color: #3c3f41; -fx-text-fill: white;"/>
+        <Label text=":" style="-fx-text-fill: white;"/>
+        <Spinner fx:id="endMinuteSpinner" min="0" max="59" initialValue="0" style="-fx-background-color: #3c3f41; -fx-text-fill: white;"/>
+    </HBox>
+    
+    <HBox spacing="10" alignment="CENTER">
+        <Button fx:id="saveButton" onAction="#handleSave" text="Enregistrer" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+        <Button fx:id="cancelButton" onAction="#handleCancel" text="Annuler" style="-fx-background-color: #f44336; -fx-text-fill: white;"/>
+    </HBox>
+    
+    <Label fx:id="errorLabel" textFill="RED" visible="false"/>
+</VBox> 

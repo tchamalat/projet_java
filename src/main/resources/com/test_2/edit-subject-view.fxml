@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="20.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.test_2.controllers.EditSubjectController">
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+    </padding>
+
+    <Label text="Modification d'une matière" style="-fx-font-size: 24; -fx-font-weight: bold;"/>
+    
+    <TextField fx:id="nameField" promptText="Nom de la matière" style="-fx-background-color: #3c3f41; -fx-text-fill: white;"/>
+    
+    <TextArea fx:id="descriptionField" promptText="Description" style="-fx-background-color: #3c3f41; -fx-text-fill: white;" prefRowCount="3"/>
+    
+    <HBox spacing="10" alignment="CENTER">
+        <Button fx:id="saveButton" onAction="#handleSave" text="Enregistrer" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+        <Button fx:id="cancelButton" onAction="#handleCancel" text="Annuler" style="-fx-background-color: #f44336; -fx-text-fill: white;"/>
+    </HBox>
+    
+    <Label fx:id="errorLabel" textFill="RED" visible="false"/>
+</VBox> 

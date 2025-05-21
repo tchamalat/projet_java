@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="20.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.test_2.controllers.SchedulesViewController">
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+    </padding>
+
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Label text="Gestion des emplois du temps" style="-fx-font-size: 24; -fx-font-weight: bold;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="addScheduleButton" onAction="#handleAddSchedule" text="Ajouter un cours" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+    </HBox>
+
+    <TableView fx:id="schedulesTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="idColumn" text="ID" prefWidth="50"/>
+            <TableColumn fx:id="subjectColumn" text="Matière" prefWidth="150"/>
+            <TableColumn fx:id="teacherColumn" text="Enseignant" prefWidth="150"/>
+            <TableColumn fx:id="roomColumn" text="Salle" prefWidth="100"/>
+            <TableColumn fx:id="dayColumn" text="Jour" prefWidth="100"/>
+            <TableColumn fx:id="startTimeColumn" text="Heure début" prefWidth="100"/>
+            <TableColumn fx:id="endTimeColumn" text="Heure fin" prefWidth="100"/>
+            <TableColumn fx:id="actionsColumn" text="Actions" prefWidth="150"/>
+        </columns>
+    </TableView>
+
+    <Label fx:id="errorLabel" textFill="RED" visible="false"/>
+</VBox> 

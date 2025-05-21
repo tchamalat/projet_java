@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox spacing="20.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.test_2.controllers.EditUserController">
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+    </padding>
+
+    <Label text="Modification d'un utilisateur" style="-fx-font-size: 24; -fx-font-weight: bold;"/>
+
+    <GridPane vgap="10" hgap="10">
+        <Label text="Type :" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+        <ComboBox fx:id="typeComboBox" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="200"/>
+
+        <Label text="Nom :" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+        <TextField fx:id="lastNameField" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="200"/>
+
+        <Label text="Prénom :" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+        <TextField fx:id="firstNameField" GridPane.columnIndex="1" GridPane.rowIndex="2" prefWidth="200"/>
+
+        <Label text="Date de naissance :" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+        <DatePicker fx:id="birthDatePicker" GridPane.columnIndex="1" GridPane.rowIndex="3" prefWidth="200"/>
+
+        <Label text="Classe :" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+        <ComboBox fx:id="classComboBox" GridPane.columnIndex="1" GridPane.rowIndex="4" prefWidth="200"/>
+
+        <Label text="Nom d'utilisateur :" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
+        <TextField fx:id="usernameField" GridPane.columnIndex="1" GridPane.rowIndex="5" prefWidth="200"/>
+
+        <Label text="Mot de passe :" GridPane.columnIndex="0" GridPane.rowIndex="6"/>
+        <PasswordField fx:id="passwordField" GridPane.columnIndex="1" GridPane.rowIndex="6" prefWidth="200"/>
+    </GridPane>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Annuler" onAction="#handleCancel" style="-fx-background-color: #f44336; -fx-text-fill: white;"/>
+        <Button text="Enregistrer" onAction="#handleSave" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+    </HBox>
+
+    <Label fx:id="errorLabel" textFill="RED" visible="false"/>
+</VBox> 

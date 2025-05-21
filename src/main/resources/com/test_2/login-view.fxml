@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox alignment="CENTER" spacing="20.0" style="-fx-background-color: #2b2b2b;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.test_2.controllers.LoginController">
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+    </padding>
+
+    <Text fill="WHITE" style="-fx-font-size: 24;" text="Connexion"/>
+    
+    <TextField fx:id="usernameField" promptText="Nom d'utilisateur" style="-fx-background-color: #3c3f41; -fx-text-fill: white;"/>
+    
+    <PasswordField fx:id="passwordField" promptText="Mot de passe" style="-fx-background-color: #3c3f41; -fx-text-fill: white;"/>
+    
+    <HBox spacing="10" alignment="CENTER">
+        <Button fx:id="loginButton" onAction="#handleLogin" text="Se connecter" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+        <Button fx:id="resetPasswordButton" onAction="#handleResetPassword" text="Réinitialiser le mot de passe" style="-fx-background-color: #2196F3; -fx-text-fill: white;"/>
+    </HBox>
+    
+    <Separator style="-fx-background-color: #666666;"/>
+    
+    <Button fx:id="createAccountButton" onAction="#handleCreateAccount" text="Créer un compte étudiant" style="-fx-background-color: #FF9800; -fx-text-fill: white;"/>
+    
+    <Label fx:id="errorLabel" textFill="RED" visible="false"/>
+</VBox> 
