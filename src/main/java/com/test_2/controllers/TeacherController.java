@@ -1,5 +1,6 @@
 package com.test_2.controllers;
 
+import com.test_2.utils.SessionManager;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -8,38 +9,17 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import java.io.IOException;
 
-public class AdminController {
+public class TeacherController {
     @FXML
     private StackPane contentArea;
 
     @FXML
-    private void handleUsersView() {
-        loadView("/com/test_2/views/users-view.fxml");
-    }
-
-    @FXML
-    private void handleRoomsView() {
-        loadView("/com/test_2/views/rooms-view.fxml");
-    }
-
-    @FXML
-    private void handleSubjectsView() {
-        loadView("/com/test_2/views/subjects-view.fxml");
-    }
-
-    @FXML
-    private void handleSchedulesView() {
-        loadView("/com/test_2/views/schedules-view.fxml");
-    }
-
-    @FXML
-    private void handleNotificationsView() {
-        loadView("/com/test_2/views/notifications-view.fxml");
-    }
-
-    @FXML
     protected void handleLogout() {
         try {
+            // Déconnexion de l'utilisateur
+            SessionManager.getInstance().logout();
+            
+            // Retour à la page de connexion
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/test_2/login-view.fxml"));
             Scene scene = new Scene(fxmlLoader.load(), 400, 300);
             Stage stage = (Stage) contentArea.getScene().getWindow();
@@ -53,6 +33,9 @@ public class AdminController {
         }
     }
 
+    /**
+     * Méthode utilitaire pour charger une vue dans la zone de contenu
+     */
     private void loadView(String fxmlPath) {
         try {
             Parent view = FXMLLoader.load(getClass().getResource(fxmlPath));
@@ -62,4 +45,4 @@ public class AdminController {
             e.printStackTrace();
         }
     }
-} 
+}

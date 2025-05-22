@@ -31,9 +31,10 @@ CREATE TABLE schedules (
     subject_id INTEGER NOT NULL,
     teacher_id INTEGER NOT NULL,
     room_id INTEGER NOT NULL,
-    day VARCHAR(10) NOT NULL CHECK (day IN ('Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi')),
+    course_date DATE NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
+    class_name TEXT NOT NULL CHECK (class_name IN ('P1', 'P2', 'A1', 'A2', 'A3')),
     FOREIGN KEY (subject_id) REFERENCES subjects(id),
     FOREIGN KEY (teacher_id) REFERENCES users(id),
     FOREIGN KEY (room_id) REFERENCES rooms(id),
@@ -52,8 +53,8 @@ CREATE TABLE notifications (
     FOREIGN KEY (sender_id) REFERENCES users(id)
 );
 
--- Création d'un index pour optimiser la recherche des cours par jour
-CREATE INDEX idx_schedules_day ON schedules(day);
+-- Création d'un index pour optimiser la recherche des cours par date
+CREATE INDEX idx_schedules_date ON schedules(course_date);
 
 -- Création d'un index pour optimiser la recherche des notifications par destinataire
 CREATE INDEX idx_notifications_recipient ON notifications(recipient_id); 
