@@ -6,7 +6,8 @@
 <?import javafx.scene.text.Text?>
 
 <BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
-            fx:controller="com.test_2.controllers.AdminController" style="-fx-background-color: #2b2b2b;">
+            fx:controller="com.test_2.controllers.AdminController" style="-fx-background-color: #2b2b2b;"
+            prefWidth="1200" prefHeight="600">
     
     <left>
         <VBox style="-fx-background-color: #1e1e1e;" prefWidth="200">
@@ -44,4 +45,4 @@
         </StackPane>
     </center>
     
-</BorderPane> 
+</BorderPane>

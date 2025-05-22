@@ -4,7 +4,6 @@ import com.test_2.database.DatabaseManager;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
-import org.mindrot.jbcrypt.BCrypt;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -57,9 +56,8 @@ public class CreateAccountController {
 
         try {
             String username = generateUsername(firstName, lastName);
-            String passwordHash = BCrypt.hashpw(password, BCrypt.gensalt());
 
-            String insertUser = "INSERT INTO users (type, last_name, first_name, birth_date, class_name, username, password_hash) " +
+            String insertUser = "INSERT INTO users (type, last_name, first_name, birth_date, class_name, username, password) " +
                               "VALUES (?, ?, ?, ?, ?, ?, ?)";
             
             try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -71,7 +69,7 @@ public class CreateAccountController {
                 pstmt.setString(4, birthDate.toString() + " 00:00:00.000");
                 pstmt.setString(5, className);
                 pstmt.setString(6, username);
-                pstmt.setString(7, passwordHash);
+                pstmt.setString(7, password);
                 
                 pstmt.executeUpdate();
                 

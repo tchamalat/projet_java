@@ -3,7 +3,6 @@ module com.test_2 {
     requires javafx.fxml;
     requires java.sql;
     requires org.controlsfx.controls;
-    requires org.xerial.sqlitejdbc;
 
     opens com.test_2 to javafx.fxml;
     opens com.test_2.controllers to javafx.fxml;

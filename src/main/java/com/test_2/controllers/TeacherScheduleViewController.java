@@ -20,10 +20,10 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 
-public class ScheduleViewController {
+public class TeacherScheduleViewController {
     @FXML private GridPane scheduleGrid;
     @FXML private Text weekDateLabel;
-    @FXML private Text classNameLabel;
+    @FXML private Text teacherNameLabel;
     @FXML private Label statusLabel;
     @FXML private Button previousWeekButton;
     @FXML private Button nextWeekButton;
@@ -33,7 +33,7 @@ public class ScheduleViewController {
     
     @FXML
     public void initialize() {
-        // Récupérer l'utilisateur connecté (l'étudiant)
+        // Récupérer l'utilisateur connecté (le professeur)
         currentUser = SessionManager.getInstance().getCurrentUser();
         
         if (currentUser == null) {
@@ -41,16 +41,28 @@ public class ScheduleViewController {
             return;
         }
         
-        // Afficher la classe de l'élève
-        classNameLabel.setText("Classe: " + currentUser.getClassName());
+        // Afficher le nom du professeur
+        teacherNameLabel.setText("Professeur: " + currentUser.getLastName() + " " + currentUser.getFirstName());
         
         // Initialiser avec la semaine courante
         currentWeekStart = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         
-        // Configurer la grille
+        // Initialiser la grille
         initializeGrid();
         
         // Charger les données pour la semaine courante
+        loadScheduleData();
+    }
+    
+    @FXML
+    private void handlePreviousWeek() {
+        currentWeekStart = currentWeekStart.minusWeeks(1);
+        loadScheduleData();
+    }
+    
+    @FXML
+    private void handleNextWeek() {
+        currentWeekStart = currentWeekStart.plusWeeks(1);
         loadScheduleData();
     }
     
@@ -89,18 +101,6 @@ public class ScheduleViewController {
         }
     }
     
-    @FXML
-    private void handlePreviousWeek() {
-        currentWeekStart = currentWeekStart.minusWeeks(1);
-        loadScheduleData();
-    }
-    
-    @FXML
-    private void handleNextWeek() {
-        currentWeekStart = currentWeekStart.plusWeeks(1);
-        loadScheduleData();
-    }
-    
     private void loadScheduleData() {
         // Mettre à jour le label de la semaine
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -110,8 +110,8 @@ public class ScheduleViewController {
         // Réinitialiser la grille pour éviter les problèmes d'état
         initializeGrid();
         
-        if (currentUser == null || currentUser.getClassName() == null) {
-            statusLabel.setText("Erreur: Données utilisateur incomplètes");
+        if (currentUser == null) {
+            statusLabel.setText("Erreur: Utilisateur non connecté");
             return;
         }
         
@@ -120,26 +120,27 @@ public class ScheduleViewController {
         
         // Afficher les dates pour le débogage
         System.out.println("Recherche des cours du " + currentWeekStart + " au " + weekEnd);
-        System.out.println("Classe de l'utilisateur: " + currentUser.getClassName());
+        System.out.println("ID du professeur: " + currentUser.getId());
         
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            // Requête SQL modifiée pour ne pas utiliser les clauses BETWEEN
+            // Requête SQL modifiée pour filtrer par ID du professeur au lieu de la classe
             String query = """
                 SELECT s.course_date, s.start_time, s.end_time, 
                        subj.name as subject_name, r.name as room_name,
-                       u.last_name, u.first_name, s.class_name
+                       s.class_name
                 FROM schedules s
                 JOIN subjects subj ON s.subject_id = subj.id
                 JOIN rooms r ON s.room_id = r.id
-                JOIN users u ON s.teacher_id = u.id
-                WHERE s.class_name = ?
+                WHERE s.teacher_id = ?
                 ORDER BY s.course_date, s.start_time
             """;
             
             int coursesLoaded = 0;
             
             try (PreparedStatement pstmt = conn.prepareStatement(query)) {
-                pstmt.setString(1, currentUser.getClassName());
+                pstmt.setInt(1, currentUser.getId());
+                
+                System.out.println("Requête SQL: " + query.replace("?", String.valueOf(currentUser.getId())));
                 
                 ResultSet rs = pstmt.executeQuery();
                 
@@ -149,7 +150,7 @@ public class ScheduleViewController {
                     LocalDate courseDate = LocalDate.parse(courseDateStr);
                     
                     // Vérifier si la date est dans la semaine actuelle
-                    if (courseDate.isBefore(currentWeekStart) || courseDate.isAfter(weekEnd)) {
+                    if (courseDate.isBefore(currentWeekStart) || courseDate.isAfter(currentWeekStart.plusDays(6))) {
                         continue;
                     }
                     
@@ -166,10 +167,10 @@ public class ScheduleViewController {
                     
                     String subjectName = rs.getString("subject_name");
                     String roomName = rs.getString("room_name");
-                    String teacherName = rs.getString("last_name") + " " + rs.getString("first_name");
+                    String className = rs.getString("class_name");
                     
-                    // Ajouter le cours à l'emploi du temps
-                    addCourseToSchedule(dayOfWeek, startHour, endHour, subjectName, roomName, teacherName);
+                    // Ajouter le cours à l'emploi du temps (avec la classe au lieu du professeur)
+                    addCourseToSchedule(dayOfWeek, startHour, endHour, subjectName, roomName, className);
                     coursesLoaded++;
                 }
                 
@@ -185,8 +186,22 @@ public class ScheduleViewController {
         }
     }
     
+    private void clearScheduleCells() {
+        // Parcourir toutes les cellules (sauf première ligne et première colonne)
+        for (int row = 1; row <= 13; row++) { // 8h-20h = 13 heures
+            for (int col = 1; col <= 5; col++) { // 5 jours
+                // Récupérer la cellule existante et la vider
+                StackPane cell = (StackPane) getNodeFromGridPane(scheduleGrid, col, row);
+                if (cell != null) {
+                    cell.getChildren().clear();
+                    cell.setBackground(null);
+                }
+            }
+        }
+    }
+    
     private void addCourseToSchedule(int dayOfWeek, int startHour, int endHour, 
-                                     String subject, String room, String teacher) {
+                                     String subject, String room, String className) {
         // Calculer la position dans la grille
         int column = dayOfWeek; // 1=Lundi, 5=Vendredi
         int startRow = startHour - 7; // Décalage (8h = ligne 1)
@@ -205,23 +220,6 @@ public class ScheduleViewController {
         StackPane cell = (StackPane) getNodeFromGridPane(scheduleGrid, column, startRow);
         
         if (cell != null) {
-            // Si le cours dure plus d'une heure, ajuster la hauteur cellulaire
-            if (duration > 1) {
-                // Supprimer cette cellule et les cellules suivantes de sa position actuelle
-                scheduleGrid.getChildren().remove(cell);
-                for (int i = 1; i < duration; i++) {
-                    StackPane nextCell = (StackPane) getNodeFromGridPane(scheduleGrid, column, startRow + i);
-                    if (nextCell != null) {
-                        scheduleGrid.getChildren().remove(nextCell);
-                    }
-                }
-                
-                // Recréer une cellule qui s'étend sur plusieurs lignes
-                cell = new StackPane();
-                cell.setStyle("-fx-border-color: transparent; -fx-border-width: 0;");
-                scheduleGrid.add(cell, column, startRow, 1, duration);
-            }
-            
             // Créer la boîte du cours
             VBox courseBox = new VBox();
             courseBox.setAlignment(Pos.CENTER);
@@ -242,10 +240,20 @@ public class ScheduleViewController {
             Label roomLabel = new Label("Salle: " + room);
             roomLabel.setStyle("-fx-text-fill: white;");
             
-            Label teacherLabel = new Label("Prof: " + teacher);
-            teacherLabel.setStyle("-fx-text-fill: white;");
+            Label classLabel = new Label("Classe: " + className);
+            classLabel.setStyle("-fx-text-fill: white;");
             
-            courseBox.getChildren().addAll(subjectLabel, timeLabel, roomLabel, teacherLabel);
+            courseBox.getChildren().addAll(subjectLabel, timeLabel, roomLabel, classLabel);
+            
+            // Si le cours dure plus d'une heure, ajuster la hauteur cellulaire
+            if (duration > 1) {
+                // Supprimer cette cellule de sa position actuelle
+                scheduleGrid.getChildren().remove(cell);
+                
+                // Recréer une cellule qui s'étend sur plusieurs lignes
+                cell = new StackPane();
+                scheduleGrid.add(cell, column, startRow, 1, duration);
+            }
             
             // Ajouter la boîte de cours à la cellule
             cell.getChildren().add(courseBox);
@@ -285,14 +293,7 @@ public class ScheduleViewController {
     
     private javafx.scene.Node getNodeFromGridPane(GridPane gridPane, int col, int row) {
         for (javafx.scene.Node node : gridPane.getChildren()) {
-            Integer columnIndex = GridPane.getColumnIndex(node);
-            Integer rowIndex = GridPane.getRowIndex(node);
-            
-            if (columnIndex == null || rowIndex == null) {
-                continue;
-            }
-            
-            if (columnIndex == col && rowIndex == row) {
+            if (GridPane.getColumnIndex(node) == col && GridPane.getRowIndex(node) == row) {
                 return node;
             }
         }

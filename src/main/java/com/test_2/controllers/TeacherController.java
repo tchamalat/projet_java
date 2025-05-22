@@ -14,6 +14,16 @@ public class TeacherController {
     private StackPane contentArea;
 
     @FXML
+    private void handleScheduleView() {
+        loadView("/com/test_2/views/teacher-schedule-view.fxml");
+    }
+    
+    @FXML
+    private void handleRoomScheduleView() {
+        loadView("/com/test_2/views/room-schedule-view.fxml");
+    }
+
+    @FXML
     protected void handleLogout() {
         try {
             // Déconnexion de l'utilisateur
@@ -21,7 +31,7 @@ public class TeacherController {
             
             // Retour à la page de connexion
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/test_2/login-view.fxml"));
-            Scene scene = new Scene(fxmlLoader.load(), 400, 300);
+            Scene scene = new Scene(fxmlLoader.load(), 600, 300);
             Stage stage = (Stage) contentArea.getScene().getWindow();
             stage.setTitle("Connexion");
             stage.setScene(scene);

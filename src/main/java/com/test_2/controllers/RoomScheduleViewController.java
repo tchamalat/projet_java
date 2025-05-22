@@ -1,16 +1,19 @@
 package com.test_2.controllers;
 
 import com.test_2.database.DatabaseManager;
-import com.test_2.models.User;
-import com.test_2.utils.SessionManager;
+import com.test_2.models.Room;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
+import javafx.util.StringConverter;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -19,127 +22,144 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
+import java.util.List;
 
-public class ScheduleViewController {
+public class RoomScheduleViewController {
     @FXML private GridPane scheduleGrid;
     @FXML private Text weekDateLabel;
-    @FXML private Text classNameLabel;
     @FXML private Label statusLabel;
     @FXML private Button previousWeekButton;
     @FXML private Button nextWeekButton;
+    @FXML private ComboBox<Room> roomsComboBox;
     
     private LocalDate currentWeekStart;
-    private User currentUser;
+    private Room selectedRoom;
     
     @FXML
     public void initialize() {
-        // Récupérer l'utilisateur connecté (l'étudiant)
-        currentUser = SessionManager.getInstance().getCurrentUser();
-        
-        if (currentUser == null) {
-            statusLabel.setText("Erreur: Utilisateur non connecté");
-            return;
-        }
-        
-        // Afficher la classe de l'élève
-        classNameLabel.setText("Classe: " + currentUser.getClassName());
-        
         // Initialiser avec la semaine courante
         currentWeekStart = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         
         // Configurer la grille
         initializeGrid();
         
-        // Charger les données pour la semaine courante
-        loadScheduleData();
-    }
-    
-    private void initializeGrid() {
-        // Nettoyer toute la grille d'abord
-        scheduleGrid.getChildren().clear();
+        // Charger la liste des salles disponibles
+        loadRooms();
         
-        // Réajouter les en-têtes
-        Label hoursHeader = new Label("Heures");
-        hoursHeader.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-alignment: CENTER;");
-        scheduleGrid.add(hoursHeader, 0, 0);
-        
-        String[] days = {"Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"};
-        for (int i = 0; i < days.length; i++) {
-            Label dayLabel = new Label(days[i]);
-            dayLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-alignment: CENTER;");
-            scheduleGrid.add(dayLabel, i + 1, 0);
-        }
-        
-        // Générer les lignes pour les heures (8h-20h)
-        for (int hour = 8; hour <= 20; hour++) {
-            // Ajouter l'étiquette de l'heure
-            Label timeLabel = new Label(hour + "h00");
-            timeLabel.setStyle("-fx-text-fill: white;");
-            timeLabel.setPrefHeight(50);
-            timeLabel.setAlignment(Pos.CENTER);
-            scheduleGrid.add(timeLabel, 0, hour - 7);
-            
-            // Ajouter des cellules vides pour chaque jour à cette heure
-            for (int day = 1; day <= 5; day++) {
-                StackPane cell = new StackPane();
-                cell.setPrefHeight(50);
-                cell.setStyle("-fx-border-color: #444444;");
-                scheduleGrid.add(cell, day, hour - 7);
+        // Configurer le formatage du ComboBox
+        roomsComboBox.setConverter(new StringConverter<Room>() {
+            @Override
+            public String toString(Room room) {
+                return room == null ? "" : room.getName() + " (" + room.getType() + ")";
             }
-        }
+
+            @Override
+            public Room fromString(String string) {
+                return null; // Pas nécessaire pour notre cas
+            }
+        });
+        
+        // Mettre à jour le label de la semaine
+        updateWeekLabel();
     }
     
     @FXML
     private void handlePreviousWeek() {
         currentWeekStart = currentWeekStart.minusWeeks(1);
-        loadScheduleData();
+        updateWeekLabel();
+        if (selectedRoom != null) {
+            loadScheduleData();
+        }
     }
     
     @FXML
     private void handleNextWeek() {
         currentWeekStart = currentWeekStart.plusWeeks(1);
-        loadScheduleData();
+        updateWeekLabel();
+        if (selectedRoom != null) {
+            loadScheduleData();
+        }
     }
     
-    private void loadScheduleData() {
-        // Mettre à jour le label de la semaine
+    @FXML
+    private void handleRoomSelection() {
+        selectedRoom = roomsComboBox.getSelectionModel().getSelectedItem();
+        if (selectedRoom != null) {
+            statusLabel.setText("Salle sélectionnée: " + selectedRoom.getName());
+            loadScheduleData();
+        }
+    }
+    
+    private void updateWeekLabel() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         weekDateLabel.setText("Semaine du " + currentWeekStart.format(formatter) + 
                              " au " + currentWeekStart.plusDays(4).format(formatter));
+    }
+    
+    private void loadRooms() {
+        ObservableList<Room> rooms = FXCollections.observableArrayList();
         
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            String query = "SELECT id, name, capacity, type FROM rooms ORDER BY name";
+            
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                ResultSet rs = pstmt.executeQuery();
+                
+                while (rs.next()) {
+                    Room room = new Room(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getInt("capacity"),
+                        rs.getString("type")
+                    );
+                    rooms.add(room);
+                }
+            }
+            
+            roomsComboBox.setItems(rooms);
+            
+            if (!rooms.isEmpty()) {
+                roomsComboBox.getSelectionModel().selectFirst();
+                selectedRoom = roomsComboBox.getSelectionModel().getSelectedItem();
+                loadScheduleData();
+            } else {
+                statusLabel.setText("Aucune salle disponible");
+            }
+        } catch (Exception e) {
+            statusLabel.setText("Erreur: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    private void loadScheduleData() {
         // Réinitialiser la grille pour éviter les problèmes d'état
         initializeGrid();
         
-        if (currentUser == null || currentUser.getClassName() == null) {
-            statusLabel.setText("Erreur: Données utilisateur incomplètes");
+        if (selectedRoom == null) {
+            statusLabel.setText("Erreur: Aucune salle sélectionnée");
             return;
         }
         
         // Calcul des dates de début et fin de semaine pour la requête
         LocalDate weekEnd = currentWeekStart.plusDays(6); // Dimanche
         
-        // Afficher les dates pour le débogage
-        System.out.println("Recherche des cours du " + currentWeekStart + " au " + weekEnd);
-        System.out.println("Classe de l'utilisateur: " + currentUser.getClassName());
-        
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            // Requête SQL modifiée pour ne pas utiliser les clauses BETWEEN
             String query = """
                 SELECT s.course_date, s.start_time, s.end_time, 
-                       subj.name as subject_name, r.name as room_name,
-                       u.last_name, u.first_name, s.class_name
+                       subj.name as subject_name, s.class_name,
+                       u.last_name, u.first_name
                 FROM schedules s
                 JOIN subjects subj ON s.subject_id = subj.id
-                JOIN rooms r ON s.room_id = r.id
                 JOIN users u ON s.teacher_id = u.id
-                WHERE s.class_name = ?
+                WHERE s.room_id = ?
                 ORDER BY s.course_date, s.start_time
             """;
             
             int coursesLoaded = 0;
             
             try (PreparedStatement pstmt = conn.prepareStatement(query)) {
-                pstmt.setString(1, currentUser.getClassName());
+                pstmt.setInt(1, selectedRoom.getId());
                 
                 ResultSet rs = pstmt.executeQuery();
                 
@@ -165,18 +185,18 @@ public class ScheduleViewController {
                     int endHour = extractHour(endTimeStr);
                     
                     String subjectName = rs.getString("subject_name");
-                    String roomName = rs.getString("room_name");
+                    String className = rs.getString("class_name");
                     String teacherName = rs.getString("last_name") + " " + rs.getString("first_name");
                     
                     // Ajouter le cours à l'emploi du temps
-                    addCourseToSchedule(dayOfWeek, startHour, endHour, subjectName, roomName, teacherName);
+                    addCourseToSchedule(dayOfWeek, startHour, endHour, subjectName, className, teacherName);
                     coursesLoaded++;
                 }
                 
                 if (coursesLoaded > 0) {
-                    statusLabel.setText(coursesLoaded + " cours chargés");
+                    statusLabel.setText(coursesLoaded + " cours chargés pour la salle " + selectedRoom.getName());
                 } else {
-                    statusLabel.setText("Aucun cours trouvé pour cette semaine");
+                    statusLabel.setText("Aucun cours trouvé pour cette salle et cette semaine");
                 }
             }
         } catch (Exception e) {
@@ -185,8 +205,22 @@ public class ScheduleViewController {
         }
     }
     
+    private void clearScheduleCells() {
+        // Parcourir toutes les cellules (sauf première ligne et première colonne)
+        for (int row = 1; row <= 13; row++) { // 8h-20h = 13 heures
+            for (int col = 1; col <= 5; col++) { // 5 jours
+                // Récupérer la cellule existante et la vider
+                StackPane cell = (StackPane) getNodeFromGridPane(scheduleGrid, col, row);
+                if (cell != null) {
+                    cell.getChildren().clear();
+                    cell.setBackground(null);
+                }
+            }
+        }
+    }
+    
     private void addCourseToSchedule(int dayOfWeek, int startHour, int endHour, 
-                                     String subject, String room, String teacher) {
+                                     String subject, String className, String teacherName) {
         // Calculer la position dans la grille
         int column = dayOfWeek; // 1=Lundi, 5=Vendredi
         int startRow = startHour - 7; // Décalage (8h = ligne 1)
@@ -207,7 +241,7 @@ public class ScheduleViewController {
         if (cell != null) {
             // Si le cours dure plus d'une heure, ajuster la hauteur cellulaire
             if (duration > 1) {
-                // Supprimer cette cellule et les cellules suivantes de sa position actuelle
+                // Supprimer cette cellule et les cellules suivantes de leur position
                 scheduleGrid.getChildren().remove(cell);
                 for (int i = 1; i < duration; i++) {
                     StackPane nextCell = (StackPane) getNodeFromGridPane(scheduleGrid, column, startRow + i);
@@ -239,13 +273,13 @@ public class ScheduleViewController {
             Label timeLabel = new Label(startHour + "h-" + endHour + "h");
             timeLabel.setStyle("-fx-text-fill: white;");
             
-            Label roomLabel = new Label("Salle: " + room);
-            roomLabel.setStyle("-fx-text-fill: white;");
+            Label classLabel = new Label("Classe: " + className);
+            classLabel.setStyle("-fx-text-fill: white;");
             
-            Label teacherLabel = new Label("Prof: " + teacher);
+            Label teacherLabel = new Label("Prof: " + teacherName);
             teacherLabel.setStyle("-fx-text-fill: white;");
             
-            courseBox.getChildren().addAll(subjectLabel, timeLabel, roomLabel, teacherLabel);
+            courseBox.getChildren().addAll(subjectLabel, timeLabel, classLabel, teacherLabel);
             
             // Ajouter la boîte de cours à la cellule
             cell.getChildren().add(courseBox);
@@ -285,17 +319,46 @@ public class ScheduleViewController {
     
     private javafx.scene.Node getNodeFromGridPane(GridPane gridPane, int col, int row) {
         for (javafx.scene.Node node : gridPane.getChildren()) {
-            Integer columnIndex = GridPane.getColumnIndex(node);
-            Integer rowIndex = GridPane.getRowIndex(node);
-            
-            if (columnIndex == null || rowIndex == null) {
-                continue;
-            }
-            
-            if (columnIndex == col && rowIndex == row) {
+            if (GridPane.getColumnIndex(node) == col && GridPane.getRowIndex(node) == row) {
                 return node;
             }
         }
         return null;
+    }
+    
+    // Méthode initializeGrid() à ajouter
+    private void initializeGrid() {
+        // Nettoyer toute la grille d'abord
+        scheduleGrid.getChildren().clear();
+        
+        // Réajouter les en-têtes
+        Label hoursHeader = new Label("Heures");
+        hoursHeader.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-alignment: CENTER;");
+        scheduleGrid.add(hoursHeader, 0, 0);
+        
+        String[] days = {"Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"};
+        for (int i = 0; i < days.length; i++) {
+            Label dayLabel = new Label(days[i]);
+            dayLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-alignment: CENTER;");
+            scheduleGrid.add(dayLabel, i + 1, 0);
+        }
+        
+        // Générer les lignes pour les heures (8h-20h)
+        for (int hour = 8; hour <= 20; hour++) {
+            // Ajouter l'étiquette de l'heure
+            Label timeLabel = new Label(hour + "h00");
+            timeLabel.setStyle("-fx-text-fill: white;");
+            timeLabel.setPrefHeight(50);
+            timeLabel.setAlignment(Pos.CENTER);
+            scheduleGrid.add(timeLabel, 0, hour - 7);
+            
+            // Ajouter des cellules vides pour chaque jour à cette heure
+            for (int day = 1; day <= 5; day++) {
+                StackPane cell = new StackPane();
+                cell.setPrefHeight(50);
+                cell.setStyle("-fx-border-color: #444444;");
+                scheduleGrid.add(cell, day, hour - 7);
+            }
+        }
     }
 }

@@ -6,7 +6,8 @@
 <?import javafx.scene.text.Text?>
 
 <BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
-            fx:controller="com.test_2.controllers.TeacherController" style="-fx-background-color: #2b2b2b;">
+            fx:controller="com.test_2.controllers.TeacherController" style="-fx-background-color: #2b2b2b;"
+            prefWidth="900" prefHeight="600">
     
     <left>
         <VBox style="-fx-background-color: #1e1e1e;" prefWidth="200">
@@ -18,7 +19,10 @@
             <Separator style="-fx-background-color: #666666;"/>
             
             <VBox spacing="10" styleClass="menu-items" VBox.vgrow="ALWAYS">
-                <!-- Les boutons du menu seront ajoutés ici plus tard -->
+                <Button fx:id="scheduleButton" text="Mon emploi du temps" onAction="#handleScheduleView" 
+                        style="-fx-background-color: #3c3f41; -fx-text-fill: white; -fx-min-width: 180;"/>
+                <Button fx:id="roomScheduleButton" text="EDT des salles" onAction="#handleRoomScheduleView" 
+                        style="-fx-background-color: #3c3f41; -fx-text-fill: white; -fx-min-width: 180;"/>
             </VBox>
             
             <Separator style="-fx-background-color: #666666;"/>
