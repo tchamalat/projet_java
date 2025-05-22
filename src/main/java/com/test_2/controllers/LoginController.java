@@ -24,8 +24,6 @@ public class LoginController {
         String username = usernameField.getText();
         String password = passwordField.getText();
         
-        System.out.println("Tentative de connexion pour l'utilisateur : " + username);
-        
         if (username.isEmpty() || password.isEmpty()) {
             showError("Veuillez remplir tous les champs");
             return;
@@ -38,13 +36,9 @@ public class LoginController {
             ResultSet rs = pstmt.executeQuery();
 
             if (rs.next()) {
-                System.out.println("Utilisateur trouvé dans la base de données");
                 String storedPassword = rs.getString("password_hash");
-                System.out.println("Mot de passe stocké : " + storedPassword);
-                System.out.println("Mot de passe saisi : " + password);
                 
                 if (password.equals(storedPassword)) {
-                    System.out.println("Mot de passe correct");
                     User user = new User(
                         rs.getInt("id"),
                         User.UserType.valueOf(rs.getString("type")),
@@ -55,28 +49,32 @@ public class LoginController {
                         rs.getString("username"),
                         rs.getString("password_hash")
                     );
+                    
+                    // Stocker l'utilisateur dans le SessionManager
+                    com.test_2.utils.SessionManager.getInstance().setCurrentUser(user);
 
                     // Rediriger vers la vue appropriée selon le type d'utilisateur
                     switch (user.getType()) {
                         case ADMIN:
-                            System.out.println("Redirection vers la vue admin");
                             loadView("/com/test_2/admin-view.fxml");
+                            break;
+                        case STUDENT:
+                            loadView("/com/test_2/student-view.fxml");
+                            break;
+                        case TEACHER:
+                            loadView("/com/test_2/teacher-view.fxml");
                             break;
                         default:
                             showError("Type d'utilisateur non supporté");
                             break;
                     }
                 } else {
-                    System.out.println("Mot de passe incorrect");
                     showError("Nom d'utilisateur ou mot de passe incorrect");
                 }
             } else {
-                System.out.println("Utilisateur non trouvé dans la base de données");
                 showError("Nom d'utilisateur ou mot de passe incorrect");
             }
         } catch (Exception e) {
-            System.err.println("Erreur lors de la connexion : " + e.getMessage());
-            e.printStackTrace();
             showError("Erreur lors de la connexion : " + e.getMessage());
         }
     }
@@ -124,8 +122,7 @@ public class LoginController {
             // Centrer la fenêtre sur l'écran
             stage.centerOnScreen();
         } catch (IOException e) {
-            System.err.println("Erreur lors du chargement de la vue : " + e.getMessage());
-            e.printStackTrace();
+            showError("Erreur lors du chargement de la vue : " + e.getMessage());
         }
     }
-} 
+}

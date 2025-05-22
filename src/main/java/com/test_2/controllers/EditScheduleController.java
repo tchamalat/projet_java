@@ -37,7 +37,7 @@ public class EditScheduleController {
         loadRooms();
         
         // Initialiser les classes
-        classComboBox.setItems(FXCollections.observableArrayList("P1", "P2", "A1", "A2", "A3"));
+        classComboBox.getItems().addAll("P1", "P2", "A1", "A2", "A3");
     }
 
     private void loadSubjects() {
@@ -88,7 +88,6 @@ public class EditScheduleController {
             subjectComboBox.setValue(schedule.getSubjectName());
             teacherComboBox.setValue(schedule.getTeacherName());
             roomComboBox.setValue(schedule.getRoomName());
-            classComboBox.setValue(schedule.getClassName());
             courseDatePicker.setValue(schedule.getCourseDate());
             
             startHourSpinner.getValueFactory().setValue(schedule.getStartTime().getHour());

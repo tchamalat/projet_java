@@ -5,7 +5,6 @@ import com.test_2.models.User;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
-import org.mindrot.jbcrypt.BCrypt;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -87,11 +86,11 @@ public class EditUserController {
                 
                 if (user == null) {
                     // Pour un nouvel utilisateur, le mot de passe est obligatoire
-                    pstmt.setString(paramIndex, BCrypt.hashpw(passwordField.getText(), BCrypt.gensalt()));
+                    pstmt.setString(paramIndex, passwordField.getText());
                 } else {
                     // Pour un utilisateur existant, on met à jour le mot de passe seulement s'il a été modifié
                     if (!passwordField.getText().isEmpty()) {
-                        pstmt.setString(paramIndex++, BCrypt.hashpw(passwordField.getText(), BCrypt.gensalt()));
+                        pstmt.setString(paramIndex++, passwordField.getText());
                     }
                     pstmt.setInt(paramIndex, user.getId());
                 }

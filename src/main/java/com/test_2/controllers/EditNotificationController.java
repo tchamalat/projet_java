@@ -3,6 +3,7 @@ package com.test_2.controllers;
 import com.test_2.database.DatabaseManager;
 import com.test_2.models.Notification;
 import com.test_2.models.User;
+import com.test_2.utils.SessionManager;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
@@ -66,6 +67,14 @@ public class EditNotificationController {
 
         if (recipient == null || content.isEmpty()) {
             showError("Veuillez remplir tous les champs");
+            return;
+        }
+
+        // Récupérer l'utilisateur depuis le SessionManager
+        User currentUser = SessionManager.getInstance().getCurrentUser();
+        
+        if (currentUser == null) {
+            showError("Erreur: Utilisateur non connecté");
             return;
         }
 
@@ -143,4 +152,4 @@ public class EditNotificationController {
         Stage stage = (Stage) errorLabel.getScene().getWindow();
         stage.close();
     }
-} 
+}

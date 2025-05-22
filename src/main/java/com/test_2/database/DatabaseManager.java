@@ -16,7 +16,6 @@ public class DatabaseManager {
     private static DatabaseManager instance;
 
     private DatabaseManager() {
-        System.out.println("Initialisation de la base de données...");
         initializeDatabase();
     }
 
@@ -30,8 +29,6 @@ public class DatabaseManager {
     private void initializeDatabase() {
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
-            
-            System.out.println("Création des tables...");
             
             // Créer les tables
             stmt.execute("""
@@ -100,17 +97,12 @@ public class DatabaseManager {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_id)");
 
             // Vérifier si l'admin existe déjà
-            System.out.println("Vérification de l'existence de l'admin...");
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM users WHERE username = 'admin'");
             if (rs.next() && rs.getInt(1) == 0) {
-                System.out.println("Création de l'admin...");
                 // Créer l'admin
                 String adminQuery = "INSERT INTO users (username, password_hash, first_name, last_name, type, birth_date, class_name) " +
                                   "VALUES ('admin', 'admin', 'Admin', 'Admin', 'ADMIN', '2000-01-01', NULL)";
                 stmt.execute(adminQuery);
-                System.out.println("Admin créé avec succès");
-            } else {
-                System.out.println("L'admin existe déjà");
             }
 
             // Vérifier si l'enseignant par défaut existe déjà
@@ -137,7 +129,6 @@ public class DatabaseManager {
             }
             
         } catch (SQLException e) {
-            System.err.println("Erreur lors de l'initialisation de la base de données : " + e.getMessage());
             e.printStackTrace();
         }
     }
