@@ -26,6 +26,8 @@
                         style="-fx-background-color: #3c3f41; -fx-text-fill: white; -fx-min-width: 180;"/>
                 <Button fx:id="schedulesButton" text="Emplois du temps" onAction="#handleSchedulesView"
                         style="-fx-background-color: #3c3f41; -fx-text-fill: white; -fx-min-width: 180;"/>
+                <Button fx:id="notificationsButton" text="Notifications" onAction="#handleNotificationsView"
+                        style="-fx-background-color: #3c3f41; -fx-text-fill: white; -fx-min-width: 180;"/>
             </VBox>
             
             <Separator style="-fx-background-color: #666666;"/>

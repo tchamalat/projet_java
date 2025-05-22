@@ -1,7 +1,5 @@
 package com.test_2.database;
 
-import org.mindrot.jbcrypt.BCrypt;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -11,13 +9,14 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.sql.ResultSet;
 
 public class DatabaseManager {
     private static final String DB_URL = "jdbc:sqlite:data/school.db";
     private static DatabaseManager instance;
-    private Connection connection;
 
     private DatabaseManager() {
+        System.out.println("Initialisation de la base de données...");
         initializeDatabase();
     }
 
@@ -29,67 +28,125 @@ public class DatabaseManager {
     }
 
     private void initializeDatabase() {
-        try {
-            new File("data").mkdirs();
-            connection = DriverManager.getConnection(DB_URL);
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement()) {
             
-            try (Statement stmt = connection.createStatement()) {
-                stmt.execute("PRAGMA foreign_keys = ON");
+            System.out.println("Création des tables...");
+            
+            // Créer les tables
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    first_name TEXT NOT NULL,
+                    last_name TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    birth_date DATE NOT NULL,
+                    class_name TEXT
+                )
+            """);
+            
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS subjects (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT UNIQUE NOT NULL,
+                    description TEXT
+                )
+            """);
+            
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS rooms (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT UNIQUE NOT NULL,
+                    capacity INTEGER NOT NULL,
+                    type TEXT NOT NULL CHECK (type IN ('Amphithéâtre', 'Salle de cours', 'Laboratoire', 'Salle informatique'))
+                )
+            """);
+            
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS schedules (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    subject_id INTEGER NOT NULL,
+                    teacher_id INTEGER NOT NULL,
+                    room_id INTEGER NOT NULL,
+                    course_date DATE NOT NULL,
+                    start_time TIME NOT NULL,
+                    end_time TIME NOT NULL,
+                    class_name TEXT NOT NULL CHECK (class_name IN ('P1', 'P2', 'A1', 'A2', 'A3')),
+                    FOREIGN KEY (subject_id) REFERENCES subjects(id),
+                    FOREIGN KEY (teacher_id) REFERENCES users(id),
+                    FOREIGN KEY (room_id) REFERENCES rooms(id)
+                )
+            """);
+
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    recipient_id INTEGER NOT NULL,
+                    content TEXT NOT NULL,
+                    sender_id INTEGER NOT NULL,
+                    date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    is_read BOOLEAN NOT NULL DEFAULT 0,
+                    FOREIGN KEY (recipient_id) REFERENCES users(id),
+                    FOREIGN KEY (sender_id) REFERENCES users(id)
+                )
+            """);
+
+            // Créer un index sur course_date pour optimiser les recherches
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_schedules_date ON schedules(course_date)");
+
+            // Créer un index pour optimiser la recherche des notifications par destinataire
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_id)");
+
+            // Vérifier si l'admin existe déjà
+            System.out.println("Vérification de l'existence de l'admin...");
+            ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM users WHERE username = 'admin'");
+            if (rs.next() && rs.getInt(1) == 0) {
+                System.out.println("Création de l'admin...");
+                // Créer l'admin
+                String adminQuery = "INSERT INTO users (username, password_hash, first_name, last_name, type, birth_date, class_name) " +
+                                  "VALUES ('admin', 'admin', 'Admin', 'Admin', 'ADMIN', '2000-01-01', NULL)";
+                stmt.execute(adminQuery);
+                System.out.println("Admin créé avec succès");
+            } else {
+                System.out.println("L'admin existe déjà");
             }
 
-            createTables();
-            createDefaultAdmin();
+            // Vérifier si l'enseignant par défaut existe déjà
+            rs = stmt.executeQuery("SELECT COUNT(*) FROM users WHERE username = 'marius.lecocq'");
+            if (rs.next() && rs.getInt(1) == 0) {
+                // Créer l'enseignant par défaut
+                String teacherQuery = "INSERT INTO users (username, password_hash, first_name, last_name, type, birth_date, class_name) " +
+                                    "VALUES ('marius.lecocq', 'password', 'Marius', 'Lecocq', 'TEACHER', '1990-01-01', NULL)";
+                stmt.execute(teacherQuery);
+            }
 
-        } catch (SQLException | IOException e) {
+            // Vérifier si la salle par défaut existe déjà
+            rs = stmt.executeQuery("SELECT COUNT(*) FROM rooms WHERE name = 'L012'");
+            if (rs.next() && rs.getInt(1) == 0) {
+                // Créer la salle par défaut
+                stmt.execute("INSERT INTO rooms (name, capacity, type) VALUES ('L012', 30, 'Salle de cours')");
+            }
+
+            // Vérifier si la matière par défaut existe déjà
+            rs = stmt.executeQuery("SELECT COUNT(*) FROM subjects WHERE name = 'Électronique'");
+            if (rs.next() && rs.getInt(1) == 0) {
+                // Créer la matière par défaut
+                stmt.execute("INSERT INTO subjects (name) VALUES ('Électronique')");
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de l'initialisation de la base de données : " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    private void createTables() throws SQLException, IOException {
-        String schema = new String(Files.readAllBytes(Paths.get("data/schema.sql")));
-        try (Statement stmt = connection.createStatement()) {
-            boolean tableExists = false;
-            try {
-                stmt.executeQuery("SELECT 1 FROM users LIMIT 1");
-                tableExists = true;
-            } catch (SQLException e) {}
-
-            if (!tableExists) {
-                for (String query : schema.split(";")) {
-                    if (!query.trim().isEmpty()) {
-                        stmt.execute(query);
-                    }
-                }
-            }
-        }
-    }
-
-    private void createDefaultAdmin() throws SQLException {
-        String checkAdmin = "SELECT COUNT(*) FROM users WHERE username = 'admin'";
-        try (Statement stmt = connection.createStatement()) {
-            if (stmt.executeQuery(checkAdmin).getInt(1) == 0) {
-                String insertAdmin = "INSERT INTO users (type, last_name, first_name, birth_date, username, password_hash) " +
-                                   "VALUES (?, ?, ?, ?, ?, ?)";
-                try (PreparedStatement pstmt = connection.prepareStatement(insertAdmin)) {
-                    pstmt.setString(1, "ADMIN");
-                    pstmt.setString(2, "Admin");
-                    pstmt.setString(3, "System");
-                    pstmt.setString(4, "2000-01-01 00:00:00.000");
-                    pstmt.setString(5, "admin");
-                    pstmt.setString(6, BCrypt.hashpw("admin", BCrypt.gensalt()));
-                    pstmt.executeUpdate();
-                }
-            }
-        }
-    }
-
     public Connection getConnection() throws SQLException {
-        if (connection == null || connection.isClosed()) {
-            connection = DriverManager.getConnection(DB_URL);
-            try (Statement stmt = connection.createStatement()) {
-                stmt.execute("PRAGMA foreign_keys = ON");
-            }
+        Connection conn = DriverManager.getConnection(DB_URL);
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("PRAGMA foreign_keys = ON");
         }
-        return connection;
+        return conn;
     }
 } 

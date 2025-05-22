@@ -6,57 +6,43 @@ import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
-import javafx.util.StringConverter;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.sql.SQLException;
 
 public class EditScheduleController {
-    @FXML
-    private ComboBox<String> subjectComboBox;
-    
-    @FXML
-    private ComboBox<String> teacherComboBox;
-    
-    @FXML
-    private ComboBox<String> roomComboBox;
-    
-    @FXML
-    private ComboBox<String> dayComboBox;
-    
-    @FXML
-    private Spinner<Integer> startHourSpinner;
-    
-    @FXML
-    private Spinner<Integer> startMinuteSpinner;
-    
-    @FXML
-    private Spinner<Integer> endHourSpinner;
-    
-    @FXML
-    private Spinner<Integer> endMinuteSpinner;
-    
-    @FXML
-    private Label errorLabel;
+    @FXML private ComboBox<String> subjectComboBox;
+    @FXML private ComboBox<String> teacherComboBox;
+    @FXML private ComboBox<String> roomComboBox;
+    @FXML private ComboBox<String> classComboBox;
+    @FXML private DatePicker courseDatePicker;
+    @FXML private Spinner<Integer> startHourSpinner;
+    @FXML private Spinner<Integer> startMinuteSpinner;
+    @FXML private Spinner<Integer> endHourSpinner;
+    @FXML private Spinner<Integer> endMinuteSpinner;
+    @FXML private Label errorLabel;
 
     private Schedule schedule;
+    private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     @FXML
     public void initialize() {
-        dayComboBox.setItems(FXCollections.observableArrayList(
-            "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"
-        ));
-        
         loadSubjects();
         loadTeachers();
         loadRooms();
+        
+        // Initialiser les classes
+        classComboBox.setItems(FXCollections.observableArrayList("P1", "P2", "A1", "A2", "A3"));
     }
 
     private void loadSubjects() {
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement pstmt = conn.prepareStatement("SELECT id, name FROM subjects ORDER BY name")) {
+             PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM subjects ORDER BY name")) {
             
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()) {
@@ -70,7 +56,7 @@ public class EditScheduleController {
     private void loadTeachers() {
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(
-                 "SELECT id, first_name, last_name FROM users WHERE type = 'TEACHER' ORDER BY last_name, first_name")) {
+                 "SELECT * FROM users WHERE type = 'TEACHER' ORDER BY last_name, first_name")) {
             
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()) {
@@ -85,7 +71,7 @@ public class EditScheduleController {
 
     private void loadRooms() {
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement pstmt = conn.prepareStatement("SELECT id, name FROM rooms ORDER BY name")) {
+             PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM rooms ORDER BY name")) {
             
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()) {
@@ -102,7 +88,8 @@ public class EditScheduleController {
             subjectComboBox.setValue(schedule.getSubjectName());
             teacherComboBox.setValue(schedule.getTeacherName());
             roomComboBox.setValue(schedule.getRoomName());
-            dayComboBox.setValue(schedule.getDay());
+            classComboBox.setValue(schedule.getClassName());
+            courseDatePicker.setValue(schedule.getCourseDate());
             
             startHourSpinner.getValueFactory().setValue(schedule.getStartTime().getHour());
             startMinuteSpinner.getValueFactory().setValue(schedule.getStartTime().getMinute());
@@ -111,131 +98,161 @@ public class EditScheduleController {
         }
     }
 
-    @FXML
-    protected void handleSave() {
-        String subject = subjectComboBox.getValue();
-        String teacher = teacherComboBox.getValue();
-        String room = roomComboBox.getValue();
-        String day = dayComboBox.getValue();
-
-        if (subject == null || teacher == null || room == null || day == null) {
-            showError("Veuillez remplir tous les champs");
-            return;
+    private boolean hasScheduleConflict(int roomId, LocalDate date, LocalTime startTime, LocalTime endTime, Integer currentScheduleId) throws SQLException {
+        String query = """
+            SELECT COUNT(*) FROM schedules 
+            WHERE room_id = ? 
+            AND course_date = ? 
+            AND (
+                (start_time <= ? AND end_time > ?) OR
+                (start_time < ? AND end_time >= ?) OR
+                (start_time >= ? AND end_time <= ?)
+            )
+        """;
+        
+        if (currentScheduleId != null) {
+            query += " AND id != ?";
         }
 
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            
+            pstmt.setInt(1, roomId);
+            pstmt.setString(2, date.format(dateFormatter));
+            pstmt.setString(3, startTime.toString());
+            pstmt.setString(4, startTime.toString());
+            pstmt.setString(5, endTime.toString());
+            pstmt.setString(6, endTime.toString());
+            pstmt.setString(7, startTime.toString());
+            pstmt.setString(8, endTime.toString());
+            
+            if (currentScheduleId != null) {
+                pstmt.setInt(9, currentScheduleId);
+            }
+
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                int count = rs.getInt(1);
+                return count > 0;
+            }
+            return false;
+        }
+    }
+
+    @FXML
+    private void handleSave() {
+        // Récupérer les valeurs sélectionnées
+        String selectedSubjectName = subjectComboBox.getValue();
+        String selectedTeacherName = teacherComboBox.getValue();
+        String selectedRoomName = roomComboBox.getValue();
+        String selectedClassName = classComboBox.getValue();
+        LocalDate selectedDate = courseDatePicker.getValue();
         LocalTime startTime = LocalTime.of(
             startHourSpinner.getValue(),
             startMinuteSpinner.getValue()
         );
-        
         LocalTime endTime = LocalTime.of(
             endHourSpinner.getValue(),
             endMinuteSpinner.getValue()
         );
 
-        if (!startTime.isBefore(endTime)) {
+        if (selectedSubjectName == null || selectedTeacherName == null || selectedRoomName == null || 
+            selectedClassName == null || selectedDate == null || startTime == null || endTime == null) {
+            showError("Veuillez remplir tous les champs");
+            return;
+        }
+
+        if (startTime.isAfter(endTime)) {
             showError("L'heure de début doit être antérieure à l'heure de fin");
             return;
         }
 
-        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            // Vérifier les conflits d'horaires
-            String checkQuery = "SELECT COUNT(*) FROM schedules WHERE day = ? AND room_id = ? AND " +
-                              "((start_time <= ? AND end_time > ?) OR (start_time < ? AND end_time >= ?))";
-            
-            if (schedule != null) {
-                checkQuery += " AND id != ?";
-            }
-            
-            try (PreparedStatement pstmt = conn.prepareStatement(checkQuery)) {
-                pstmt.setString(1, day);
-                pstmt.setInt(2, getRoomId(room));
-                pstmt.setTime(3, java.sql.Time.valueOf(startTime));
-                pstmt.setTime(4, java.sql.Time.valueOf(startTime));
-                pstmt.setTime(5, java.sql.Time.valueOf(endTime));
-                pstmt.setTime(6, java.sql.Time.valueOf(endTime));
-                
-                if (schedule != null) {
-                    pstmt.setInt(7, schedule.getId());
-                }
-                
-                ResultSet rs = pstmt.executeQuery();
-                if (rs.next() && rs.getInt(1) > 0) {
-                    showError("Il y a un conflit d'horaires pour cette salle");
-                    return;
-                }
-            }
+        try {
+            try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+                conn.setAutoCommit(false);
 
-            // Enregistrer le cours
-            String query;
-            if (schedule == null) {
-                query = "INSERT INTO schedules (subject_id, teacher_id, room_id, day, start_time, end_time) " +
-                       "VALUES (?, ?, ?, ?, ?, ?)";
-            } else {
-                query = "UPDATE schedules SET subject_id = ?, teacher_id = ?, room_id = ?, " +
-                       "day = ?, start_time = ?, end_time = ? WHERE id = ?";
-            }
+                try {
+                    int subjectId = getSubjectId(selectedSubjectName);
+                    int teacherId = getTeacherId(selectedTeacherName);
+                    int roomId = getRoomId(selectedRoomName);
 
-            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
-                int paramIndex = 1;
-                pstmt.setInt(paramIndex++, getSubjectId(subject));
-                pstmt.setInt(paramIndex++, getTeacherId(teacher));
-                pstmt.setInt(paramIndex++, getRoomId(room));
-                pstmt.setString(paramIndex++, day);
-                pstmt.setTime(paramIndex++, java.sql.Time.valueOf(startTime));
-                pstmt.setTime(paramIndex++, java.sql.Time.valueOf(endTime));
-                
-                if (schedule != null) {
-                    pstmt.setInt(paramIndex, schedule.getId());
+                    if (hasScheduleConflict(roomId, selectedDate, startTime, endTime, schedule != null ? schedule.getId() : null)) {
+                        showError("Cette salle est déjà occupée pendant cette période");
+                        return;
+                    }
+
+                    String insertQuery = """
+                        INSERT INTO schedules (subject_id, teacher_id, room_id, course_date, start_time, end_time, class_name)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """;
+
+                    try (PreparedStatement insertStmt = conn.prepareStatement(insertQuery)) {
+                        insertStmt.setInt(1, subjectId);
+                        insertStmt.setInt(2, teacherId);
+                        insertStmt.setInt(3, roomId);
+                        insertStmt.setString(4, selectedDate.format(dateFormatter));
+                        insertStmt.setString(5, startTime.toString());
+                        insertStmt.setString(6, endTime.toString());
+                        insertStmt.setString(7, selectedClassName);
+                        
+                        insertStmt.executeUpdate();
+                        
+                        conn.commit();
+                        Stage stage = (Stage) errorLabel.getScene().getWindow();
+                        stage.close();
+                    }
+                } catch (SQLException e) {
+                    conn.rollback();
+                    throw e;
                 }
-                
-                pstmt.executeUpdate();
-                closeWindow();
             }
-        } catch (Exception e) {
-            showError("Erreur lors de l'enregistrement : " + e.getMessage());
+        } catch (SQLException e) {
+            showError("Erreur lors de l'enregistrement du cours : " + e.getMessage());
         }
     }
 
-    private int getSubjectId(String subjectName) throws Exception {
+    private int getSubjectId(String subjectName) throws SQLException {
+        String query = "SELECT id FROM subjects WHERE name = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement pstmt = conn.prepareStatement("SELECT id FROM subjects WHERE name = ?")) {
-            
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setString(1, subjectName);
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
                 return rs.getInt("id");
             }
-            throw new Exception("Matière non trouvée");
+            throw new SQLException("Matière non trouvée : " + subjectName);
         }
     }
 
-    private int getTeacherId(String teacherName) throws Exception {
+    private int getTeacherId(String teacherName) throws SQLException {
         String[] names = teacherName.split(" ");
+        if (names.length != 2) {
+            throw new SQLException("Format du nom d'enseignant invalide : " + teacherName);
+        }
+        
+        String query = "SELECT id FROM users WHERE first_name = ? AND last_name = ? AND type = 'TEACHER'";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(
-                 "SELECT id FROM users WHERE type = 'TEACHER' AND last_name = ? AND first_name = ?")) {
-            
-            pstmt.setString(1, names[0]);
-            pstmt.setString(2, names[1]);
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setString(1, names[1]);
+            pstmt.setString(2, names[0]);
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
                 return rs.getInt("id");
             }
-            throw new Exception("Enseignant non trouvé");
+            throw new SQLException("Enseignant non trouvé : " + teacherName);
         }
     }
 
-    private int getRoomId(String roomName) throws Exception {
+    private int getRoomId(String roomName) throws SQLException {
+        String query = "SELECT id FROM rooms WHERE name = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement pstmt = conn.prepareStatement("SELECT id FROM rooms WHERE name = ?")) {
-            
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setString(1, roomName);
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
                 return rs.getInt("id");
             }
-            throw new Exception("Salle non trouvée");
+            throw new SQLException("Salle non trouvée : " + roomName);
         }
     }
 

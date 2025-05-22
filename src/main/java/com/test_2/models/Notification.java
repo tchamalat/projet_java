@@ -8,6 +8,7 @@ public class Notification {
     private String content;
     private User sender;
     private LocalDateTime date;
+    private boolean isRead;
 
     public Notification(int id, String recipient, String content, User sender) {
         this.id = id;
@@ -15,6 +16,7 @@ public class Notification {
         this.content = content;
         this.sender = sender;
         this.date = LocalDateTime.now();
+        this.isRead = false;
     }
 
     // Getters and Setters
@@ -32,4 +34,12 @@ public class Notification {
 
     public LocalDateTime getDate() { return date; }
     public void setDate(LocalDateTime date) { this.date = date; }
+
+    public boolean isRead() { return isRead; }
+    public void setRead(boolean isRead) { this.isRead = isRead; }
+
+    @Override
+    public String toString() {
+        return content;
+    }
 } 

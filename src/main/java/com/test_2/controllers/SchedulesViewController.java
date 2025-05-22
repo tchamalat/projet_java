@@ -6,6 +6,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -17,15 +18,12 @@ import javafx.beans.property.SimpleStringProperty;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 
 public class SchedulesViewController {
     @FXML
     private TableView<Schedule> schedulesTable;
-    
-    @FXML
-    private TableColumn<Schedule, Integer> idColumn;
     
     @FXML
     private TableColumn<Schedule, String> subjectColumn;
@@ -37,13 +35,16 @@ public class SchedulesViewController {
     private TableColumn<Schedule, String> roomColumn;
     
     @FXML
-    private TableColumn<Schedule, String> dayColumn;
+    private TableColumn<Schedule, String> classColumn;
     
     @FXML
-    private TableColumn<Schedule, String> startTimeColumn;
+    private TableColumn<Schedule, LocalDate> dateColumn;
     
     @FXML
-    private TableColumn<Schedule, String> endTimeColumn;
+    private TableColumn<Schedule, LocalTime> startTimeColumn;
+    
+    @FXML
+    private TableColumn<Schedule, LocalTime> endTimeColumn;
     
     @FXML
     private TableColumn<Schedule, Void> actionsColumn;
@@ -52,69 +53,78 @@ public class SchedulesViewController {
     private Label errorLabel;
 
     private ObservableList<Schedule> schedules = FXCollections.observableArrayList();
-    private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
     @FXML
     public void initialize() {
+        System.out.println("Initialisation du contrôleur SchedulesViewController");
         setupTableColumns();
-        setupActionsColumn();
         loadSchedules();
     }
 
     private void setupTableColumns() {
-        idColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         subjectColumn.setCellValueFactory(new PropertyValueFactory<>("subjectName"));
         teacherColumn.setCellValueFactory(new PropertyValueFactory<>("teacherName"));
         roomColumn.setCellValueFactory(new PropertyValueFactory<>("roomName"));
-        dayColumn.setCellValueFactory(new PropertyValueFactory<>("day"));
-        startTimeColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getStartTime().format(timeFormatter)));
-        endTimeColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getEndTime().format(timeFormatter)));
-    }
+        classColumn.setCellValueFactory(new PropertyValueFactory<>("className"));
+        dateColumn.setCellValueFactory(new PropertyValueFactory<>("courseDate"));
+        startTimeColumn.setCellValueFactory(new PropertyValueFactory<>("startTime"));
+        endTimeColumn.setCellValueFactory(new PropertyValueFactory<>("endTime"));
 
-    private void setupActionsColumn() {
+        // Configuration de la colonne des actions
         actionsColumn.setCellFactory(col -> new TableCell<>() {
             private final Button editButton = new Button("Modifier");
             private final Button deleteButton = new Button("Supprimer");
-            private final HBox buttons = new HBox(10, editButton, deleteButton);
 
             {
-                editButton.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white;");
+                editButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
                 deleteButton.setStyle("-fx-background-color: #f44336; -fx-text-fill: white;");
-                
-                editButton.setOnAction(e -> {
+
+                editButton.setOnAction(event -> {
                     Schedule schedule = getTableView().getItems().get(getIndex());
-                    handleEditSchedule(schedule);
+                    handleEdit(schedule);
                 });
-                
-                deleteButton.setOnAction(e -> {
+
+                deleteButton.setOnAction(event -> {
                     Schedule schedule = getTableView().getItems().get(getIndex());
-                    handleDeleteSchedule(schedule);
+                    handleDelete(schedule);
                 });
             }
 
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                setGraphic(empty ? null : buttons);
+                if (empty) {
+                    setGraphic(null);
+                } else {
+                    HBox buttons = new HBox(5, editButton, deleteButton);
+                    setGraphic(buttons);
+                }
             }
         });
     }
 
     private void loadSchedules() {
+        System.out.println("Chargement des cours...");
         schedules.clear();
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(
-                 "SELECT s.*, sub.name as subject_name, t.first_name || ' ' || t.last_name as teacher_name, " +
-                 "r.name as room_name FROM schedules s " +
+                 "SELECT s.id, s.subject_id, sub.name as subject_name, " +
+                 "s.teacher_id, u.last_name || ' ' || u.first_name as teacher_name, " +
+                 "s.room_id, r.name as room_name, s.course_date, s.start_time, s.end_time, " +
+                 "s.class_name " +
+                 "FROM schedules s " +
                  "JOIN subjects sub ON s.subject_id = sub.id " +
-                 "JOIN users t ON s.teacher_id = t.id " +
+                 "JOIN users u ON s.teacher_id = u.id " +
                  "JOIN rooms r ON s.room_id = r.id " +
-                 "ORDER BY s.day, s.start_time")) {
-            
+                 "ORDER BY s.course_date, s.start_time")) {
+
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()) {
+                System.out.println("Lecture d'un cours :");
+                System.out.println("- Date : " + rs.getString("course_date"));
+                System.out.println("- Heure début : " + rs.getString("start_time"));
+                System.out.println("- Heure fin : " + rs.getString("end_time"));
+                
                 Schedule schedule = new Schedule(
                     rs.getInt("id"),
                     rs.getInt("subject_id"),
@@ -123,66 +133,81 @@ public class SchedulesViewController {
                     rs.getString("teacher_name"),
                     rs.getInt("room_id"),
                     rs.getString("room_name"),
-                    rs.getString("day"),
-                    rs.getTime("start_time").toLocalTime(),
-                    rs.getTime("end_time").toLocalTime()
+                    LocalDate.parse(rs.getString("course_date")),
+                    LocalTime.parse(rs.getString("start_time")),
+                    LocalTime.parse(rs.getString("end_time")),
+                    rs.getString("class_name")
                 );
                 schedules.add(schedule);
             }
+            System.out.println("Cours chargés : " + schedules.size());
             schedulesTable.setItems(schedules);
         } catch (Exception e) {
-            showError("Erreur lors du chargement des emplois du temps : " + e.getMessage());
+            System.err.println("Erreur lors du chargement des cours : " + e.getMessage());
+            e.printStackTrace();
+            showError("Erreur lors du chargement des cours : " + e.getMessage());
         }
     }
 
     @FXML
-    protected void handleAddSchedule() {
+    protected void handleAdd() {
+        System.out.println("Ajout d'un nouveau cours");
         try {
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/test_2/edit-schedule-view.fxml"));
-            Scene scene = new Scene(fxmlLoader.load(), 500, 400);
             Stage stage = new Stage();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/test_2/views/edit-schedule-view.fxml"));
+            Parent root = loader.load();
+            EditScheduleController controller = loader.getController();
+            controller.setSchedule(null);
+
             stage.setTitle("Ajout d'un cours");
-            stage.setScene(scene);
+            stage.setScene(new Scene(root));
             stage.showAndWait();
-            loadSchedules(); // Recharger la liste après l'ajout
+            loadSchedules();
         } catch (Exception e) {
+            System.err.println("Erreur lors de l'ouverture de la fenêtre d'ajout : " + e.getMessage());
+            e.printStackTrace();
             showError("Erreur lors de l'ouverture de la fenêtre d'ajout : " + e.getMessage());
         }
     }
 
-    private void handleEditSchedule(Schedule schedule) {
+    private void handleEdit(Schedule schedule) {
+        System.out.println("Modification du cours : " + schedule.getId());
         try {
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/test_2/edit-schedule-view.fxml"));
-            Scene scene = new Scene(fxmlLoader.load(), 500, 400);
             Stage stage = new Stage();
-            
-            EditScheduleController controller = fxmlLoader.getController();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/test_2/views/edit-schedule-view.fxml"));
+            Parent root = loader.load();
+            EditScheduleController controller = loader.getController();
             controller.setSchedule(schedule);
-            
+
             stage.setTitle("Modification d'un cours");
-            stage.setScene(scene);
+            stage.setScene(new Scene(root));
             stage.showAndWait();
-            loadSchedules(); // Recharger la liste après la modification
+            loadSchedules();
         } catch (Exception e) {
+            System.err.println("Erreur lors de l'ouverture de la fenêtre de modification : " + e.getMessage());
+            e.printStackTrace();
             showError("Erreur lors de l'ouverture de la fenêtre de modification : " + e.getMessage());
         }
     }
 
-    private void handleDeleteSchedule(Schedule schedule) {
+    private void handleDelete(Schedule schedule) {
+        System.out.println("Suppression du cours : " + schedule.getId());
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Confirmation de suppression");
         alert.setHeaderText("Supprimer le cours");
-        alert.setContentText("Êtes-vous sûr de vouloir supprimer le cours de " + schedule.getSubjectName() + 
-                           " avec " + schedule.getTeacherName() + " ?");
+        alert.setContentText("Êtes-vous sûr de vouloir supprimer ce cours ?");
 
         if (alert.showAndWait().get() == ButtonType.OK) {
             try (Connection conn = DatabaseManager.getInstance().getConnection();
                  PreparedStatement pstmt = conn.prepareStatement("DELETE FROM schedules WHERE id = ?")) {
                 
                 pstmt.setInt(1, schedule.getId());
-                pstmt.executeUpdate();
-                loadSchedules(); // Recharger la liste après la suppression
+                int result = pstmt.executeUpdate();
+                System.out.println("Cours supprimé : " + result + " ligne(s) affectée(s)");
+                loadSchedules();
             } catch (Exception e) {
+                System.err.println("Erreur lors de la suppression : " + e.getMessage());
+                e.printStackTrace();
                 showError("Erreur lors de la suppression : " + e.getMessage());
             }
         }

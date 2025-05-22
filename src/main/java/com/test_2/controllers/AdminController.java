@@ -33,6 +33,11 @@ public class AdminController {
     }
 
     @FXML
+    private void handleNotificationsView() {
+        loadView("/com/test_2/views/notifications-view.fxml");
+    }
+
+    @FXML
     protected void handleLogout() {
         try {
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/test_2/login-view.fxml"));

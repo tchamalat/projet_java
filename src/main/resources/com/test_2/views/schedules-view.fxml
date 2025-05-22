@@ -10,20 +10,20 @@
     </padding>
 
     <HBox spacing="10" alignment="CENTER_LEFT">
-        <Label text="Gestion des emplois du temps" style="-fx-font-size: 24; -fx-font-weight: bold;"/>
+        <Label text="Emploi du temps" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <Button fx:id="addScheduleButton" onAction="#handleAddSchedule" text="Ajouter un cours" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+        <Button text="Ajouter un cours" onAction="#handleAdd" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
     </HBox>
 
     <TableView fx:id="schedulesTable" VBox.vgrow="ALWAYS">
         <columns>
-            <TableColumn fx:id="idColumn" text="ID" prefWidth="50"/>
             <TableColumn fx:id="subjectColumn" text="Matière" prefWidth="150"/>
             <TableColumn fx:id="teacherColumn" text="Enseignant" prefWidth="150"/>
             <TableColumn fx:id="roomColumn" text="Salle" prefWidth="100"/>
-            <TableColumn fx:id="dayColumn" text="Jour" prefWidth="100"/>
-            <TableColumn fx:id="startTimeColumn" text="Heure début" prefWidth="100"/>
-            <TableColumn fx:id="endTimeColumn" text="Heure fin" prefWidth="100"/>
+            <TableColumn fx:id="classColumn" text="Classe" prefWidth="80"/>
+            <TableColumn fx:id="dateColumn" text="Date" prefWidth="100"/>
+            <TableColumn fx:id="startTimeColumn" text="Heure de début" prefWidth="100"/>
+            <TableColumn fx:id="endTimeColumn" text="Heure de fin" prefWidth="100"/>
             <TableColumn fx:id="actionsColumn" text="Actions" prefWidth="150"/>
         </columns>
     </TableView>
